@@ -1,9 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
-void main() => runApp(const MyApp());
+void main() => runApp(
+      const ProviderScope(
+        child: MyApp(),
+      ),
+    );
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
@@ -20,96 +25,147 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key}) : super(key: key);
+final globalKeysProvider = Provider<Map<String, GlobalKey>>((ref) {
+  return {
+    'infoButtonKey': GlobalKey(),
+    'favoriteButtonKey': GlobalKey(),
+  };
+});
+
+final fetcher = FutureProvider<Map<String, bool>>((_) async {
+  return Future.delayed(const Duration(seconds: 3), () {
+    return {
+      'ALFA': false,
+      'BRAVO': false,
+      'CHARLIE': false,
+      'DELTA': false,
+      'ECHO': false,
+      'FOXTROT': false,
+      'GOLF': false,
+      'HOTEL': false,
+      'INDIA': false,
+      'JULIETT': false,
+      'KILO': false,
+      'LIMA': false,
+      'MIKE': false,
+    };
+  });
+});
+
+final showTutorialProvider = StateProvider<bool>((_) {
+  return true;
+});
+
+class MyHomePage extends ConsumerStatefulWidget {
+  const MyHomePage({super.key});
 
   @override
-  MyHomePageState createState() => MyHomePageState();
+  ConsumerState<ConsumerStatefulWidget> createState() => _MyHomePageState();
 }
 
-class MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends ConsumerState<MyHomePage> {
   late TutorialCoachMark tutorialCoachMark;
-
-  GlobalKey infoButtonKey = GlobalKey();
-  GlobalKey favoriteButtonKey = GlobalKey();
-
-  Map<String, bool> items = {
-    'ALFA': false,
-    'BRAVO': false,
-    'CHARLIE': false,
-    'DELTA': false,
-    'ECHO': false,
-    'FOXTROT': false,
-    'GOLF': false,
-    'HOTEL': false,
-    'INDIA': false,
-    'JULIETT': false,
-    'KILO': false,
-    'LIMA': false,
-    'MIKE': false,
-  };
-
-  @override
-  void initState() {
-    createTutorial();
-    Future.delayed(Duration.zero, showTutorial);
-    super.initState();
-  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('コーチマークサンプル'),
-        actions: [
-          IconButton(
-            key: infoButtonKey,
-            onPressed: () {
-              showLicensePage(context: context);
-            },
-            icon: const Icon(Icons.info),
+    ref.listen(fetcher, (previous, next) {
+      // 一度でもコーチマークを表示していれば、何もしない
+      if (!ref.watch(showTutorialProvider)) {
+        return;
+      }
+
+      // データ取得が完了するまで何もしない
+      if (next is! AsyncData) {
+        return;
+      }
+
+      print('Build完了後実行処理: 開始');
+      createTutorial();
+      showTutorial();
+      print('Build完了後実行処理: 終了');
+
+      ref.read(showTutorialProvider.notifier).update((_) => false);
+    });
+
+    return ref.watch(fetcher).when(
+      loading: () {
+        print('ロード中');
+
+        return const Center(
+          child: CircularProgressIndicator.adaptive(),
+        );
+      },
+      error: (error, stackTrace) {
+        print('エラー発生');
+
+        return const Center(
+          child: CircularProgressIndicator.adaptive(),
+        );
+      },
+      data: (data) {
+        print('データ取得完了');
+        final infoButtonKey = ref.read(globalKeysProvider)['infoButtonKey'];
+        final favoriteButtonKey =
+            ref.read(globalKeysProvider)['favoriteButtonKey'];
+
+        final items = data;
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('コーチマークサンプル'),
+            actions: [
+              IconButton(
+                key: infoButtonKey,
+                onPressed: () {
+                  showLicensePage(context: context);
+                },
+                icon: const Icon(Icons.info),
+              ),
+            ],
           ),
-        ],
-      ),
-      body: CustomScrollView(
-        slivers: [
-          SliverList.builder(
-            itemBuilder: (_, index) {
-              return ListTile(
-                title: Text(items.keys.elementAt(index)),
-                subtitle: Text('this is test message. ' * 5),
-                trailing: IconButton(
-                  key: index == 0 ? favoriteButtonKey : null,
-                  onPressed: () {
-                    setState(() {
-                      items.update(
-                          items.keys.elementAt(index), (value) => !value);
-                    });
-                  },
-                  icon: Icon(
-                    items.values.elementAt(index)
-                        ? Icons.favorite
-                        : Icons.favorite_outline,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                ),
-                onTap: () {
-                  showModalBottomSheet(
-                    context: context,
-                    showDragHandle: true,
-                    builder: (_) {
-                      return Center(
-                        child: Text('username: ${items[index]}'),
+          body: CustomScrollView(
+            slivers: [
+              SliverList.builder(
+                itemBuilder: (_, index) {
+                  return ListTile(
+                    title: Text(items.keys.elementAt(index)),
+                    subtitle: Text('this is test message. ' * 5),
+                    trailing: IconButton(
+                      key: index == 0 ? favoriteButtonKey : null,
+                      onPressed: () {
+                        setState(() {
+                          items.update(
+                              items.keys.elementAt(index), (value) => !value);
+                        });
+                      },
+                      icon: Icon(
+                        items.values.elementAt(index)
+                            ? Icons.favorite
+                            : Icons.favorite_outline,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        showDragHandle: true,
+                        builder: (_) {
+                          return Center(
+                            child: Text('username: ${items[index]}'),
+                          );
+                        },
                       );
                     },
                   );
                 },
-              );
-            },
-            itemCount: items.length,
+                itemCount: items.length,
+              ),
+            ],
           ),
-        ],
-      ),
+          floatingActionButton: FloatingActionButton(onPressed: () {
+            ref.refresh(fetcher);
+          }),
+        );
+      },
     );
   }
 
@@ -134,6 +190,9 @@ class MyHomePageState extends State<MyHomePage> {
 
   List<TargetFocus> _createTargets() {
     List<TargetFocus> targets = [];
+
+    final infoButtonKey = ref.read(globalKeysProvider)['infoButtonKey'];
+    final favoriteButtonKey = ref.read(globalKeysProvider)['favoriteButtonKey'];
 
     targets.add(
       TargetFocus(
