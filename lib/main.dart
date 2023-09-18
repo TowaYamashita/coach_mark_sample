@@ -39,13 +39,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-final globalKeysProvider = Provider<Map<String, GlobalKey>>((ref) {
-  return {
-    'infoButtonKey': GlobalKey(),
-    'favoriteButtonKey': GlobalKey(),
-  };
-});
-
 final fetcher = FutureProvider<Map<String, bool>>((_) async {
   return Future.delayed(const Duration(seconds: 3), () {
     return {
@@ -72,7 +65,6 @@ final coachMarkProvider = StateNotifierProvider<CoachMarkNotifier, bool>((ref) {
 
   return CoachMarkNotifier(
     init: showTutorial ?? true,
-    coachMark: ref.watch(tutorialProvider),
     onShowedTutorial: () {
       sharedPreferences.setBool('showTutorial', false);
     },
@@ -82,144 +74,157 @@ final coachMarkProvider = StateNotifierProvider<CoachMarkNotifier, bool>((ref) {
 class CoachMarkNotifier extends StateNotifier<bool> {
   CoachMarkNotifier({
     required bool init,
-    required this.coachMark,
     required this.onShowedTutorial,
   }) : super(init);
 
-  final TutorialCoachMark coachMark;
   final void Function() onShowedTutorial;
 
   /// コーチマークを表示する
   /// - 一度でも表示していれば何もしない
-  void show(BuildContext context) {
+  void show(
+    BuildContext context, {
+    required GlobalKey infoButtonKey,
+    required GlobalKey favoriteButtonKey,
+  }) {
     if (state == false || context.mounted == false) {
       return;
     }
 
+    final coachMark = _tutorialCoachMarkBuilder(
+      infoButtonKey,
+      favoriteButtonKey,
+    );
     coachMark.show(context: context);
     onShowedTutorial();
     state = false;
   }
+
+  TutorialCoachMark _tutorialCoachMarkBuilder(
+    GlobalKey infoButtonKey,
+    GlobalKey favoriteButtonKey,
+  ) {
+    return TutorialCoachMark(
+      targets: _targetFocusBuilder(infoButtonKey, favoriteButtonKey),
+      colorShadow: Colors.deepOrange,
+      alignSkip: Alignment.bottomLeft,
+      skipWidget: ElevatedButton.icon(
+        icon: const Icon(Icons.double_arrow_rounded),
+        label: const Text('スキップ'),
+        onPressed: () {},
+      ),
+      paddingFocus: 5,
+      opacityShadow: 0.8,
+    );
+  }
+
+  List<TargetFocus> _targetFocusBuilder(
+    GlobalKey infoButtonKey,
+    GlobalKey favoriteButtonKey,
+  ) {
+    List<TargetFocus> targets = [];
+
+    targets.add(
+      TargetFocus(
+        keyTarget: infoButtonKey,
+        contents: [
+          TargetContent(
+            align: ContentAlign.custom,
+            customPosition: CustomTargetContentPosition(
+              bottom: 0,
+              left: 0,
+            ),
+            builder: (_, controller) {
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: controller.next,
+                    icon: const Icon(Icons.arrow_forward),
+                    label: const Text('次へ'),
+                  ),
+                ],
+              );
+            },
+          ),
+          TargetContent(
+            align: ContentAlign.bottom,
+            builder: (_, controller) {
+              return const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "ライセンス情報",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontSize: 20.0,
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    "このアプリケーションに関するライセンス情報を閲覧したい場合は、このアイコンをタップしてください。",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+    targets.add(
+      TargetFocus(
+        keyTarget: favoriteButtonKey,
+        contents: [
+          TargetContent(
+            align: ContentAlign.custom,
+            customPosition: CustomTargetContentPosition(
+              bottom: 0,
+              left: 0,
+            ),
+            builder: (_, controller) {
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: controller.next,
+                    icon: const Icon(Icons.arrow_forward),
+                    label: const Text('次へ'),
+                  ),
+                ],
+              );
+            },
+          ),
+          TargetContent(
+            align: ContentAlign.bottom,
+            builder: (_, controller) {
+              return const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "お気に入り",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontSize: 20.0,
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    "お気に入りにしたいユーザがいる場合は、そのユーザの横のハートボタンをタップしてください。",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ],
+              );
+            },
+          )
+        ],
+      ),
+    );
+
+    return targets;
+  }
 }
-
-final tutorialProvider = Provider<TutorialCoachMark>((ref) {
-  List<TargetFocus> targets = [];
-
-  final infoButtonKey = ref.watch(globalKeysProvider)['infoButtonKey'];
-  final favoriteButtonKey = ref.watch(globalKeysProvider)['favoriteButtonKey'];
-
-  targets.add(
-    TargetFocus(
-      keyTarget: infoButtonKey,
-      contents: [
-        TargetContent(
-          align: ContentAlign.custom,
-          customPosition: CustomTargetContentPosition(
-            bottom: 0,
-            left: 0,
-          ),
-          builder: (_, controller) {
-            return Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: controller.next,
-                  icon: const Icon(Icons.arrow_forward),
-                  label: const Text('次へ'),
-                ),
-              ],
-            );
-          },
-        ),
-        TargetContent(
-          align: ContentAlign.bottom,
-          builder: (_, controller) {
-            return const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "ライセンス情報",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    fontSize: 20.0,
-                  ),
-                ),
-                SizedBox(height: 10),
-                Text(
-                  "このアプリケーションに関するライセンス情報を閲覧したい場合は、このアイコンをタップしてください。",
-                  style: TextStyle(color: Colors.white),
-                ),
-              ],
-            );
-          },
-        ),
-      ],
-    ),
-  );
-  targets.add(
-    TargetFocus(
-      keyTarget: favoriteButtonKey,
-      contents: [
-        TargetContent(
-          align: ContentAlign.custom,
-          customPosition: CustomTargetContentPosition(
-            bottom: 0,
-            left: 0,
-          ),
-          builder: (_, controller) {
-            return Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: controller.next,
-                  icon: const Icon(Icons.arrow_forward),
-                  label: const Text('次へ'),
-                ),
-              ],
-            );
-          },
-        ),
-        TargetContent(
-          align: ContentAlign.bottom,
-          builder: (_, controller) {
-            return const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "お気に入り",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    fontSize: 20.0,
-                  ),
-                ),
-                SizedBox(height: 10),
-                Text(
-                  "お気に入りにしたいユーザがいる場合は、そのユーザの横のハートボタンをタップしてください。",
-                  style: TextStyle(color: Colors.white),
-                ),
-              ],
-            );
-          },
-        )
-      ],
-    ),
-  );
-
-  return TutorialCoachMark(
-    targets: targets,
-    colorShadow: Colors.deepOrange,
-    alignSkip: Alignment.bottomLeft,
-    skipWidget: ElevatedButton.icon(
-      icon: const Icon(Icons.double_arrow_rounded),
-      label: const Text('スキップ'),
-      onPressed: () {},
-    ),
-    paddingFocus: 5,
-    opacityShadow: 0.8,
-  );
-});
 
 class MyHomePage extends ConsumerStatefulWidget {
   const MyHomePage({super.key});
@@ -229,6 +234,16 @@ class MyHomePage extends ConsumerStatefulWidget {
 }
 
 class _MyHomePageState extends ConsumerState<MyHomePage> {
+  late final GlobalKey infoButtonKey;
+  late final GlobalKey favoriteButtonKey;
+
+  @override
+  void initState() {
+    super.initState();
+    infoButtonKey = GlobalKey();
+    favoriteButtonKey = GlobalKey();
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen(fetcher, (previous, next) {
@@ -240,7 +255,11 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
         return;
       }
 
-      ref.watch(coachMarkProvider.notifier).show(context);
+      ref.watch(coachMarkProvider.notifier).show(
+            context,
+            infoButtonKey: infoButtonKey,
+            favoriteButtonKey: favoriteButtonKey,
+          );
       print('コーチマーク表示処理処理: 終了');
     });
 
@@ -261,10 +280,6 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
       },
       data: (data) {
         print('データ取得完了');
-
-        final infoButtonKey = ref.read(globalKeysProvider)['infoButtonKey'];
-        final favoriteButtonKey =
-            ref.read(globalKeysProvider)['favoriteButtonKey'];
 
         final items = data;
         return Scaffold(
