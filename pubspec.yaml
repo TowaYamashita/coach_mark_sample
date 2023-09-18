@@ -38,6 +38,7 @@ dependencies:
   tutorial_coach_mark: ^1.2.9
   riverpod: ^2.4.0
   flutter_riverpod: ^2.4.0
+  shared_preferences: ^2.2.1
 
 dev_dependencies:
   flutter_test:
